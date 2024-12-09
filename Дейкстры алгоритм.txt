@@ -1,0 +1,149 @@
+#include <iostream>
+#include <vector>
+#include <random>
+#include <algorithm>
+#include <limits>
+
+using namespace std;
+
+/**
+ * @brief Функция генерирующая матрицу путей со случайными значениями
+ * @param numNodes - количество узлов в графе
+ * @param minValue - минимальное значение элемента в графе
+ * @param maxValue - максимальное значение элемента в графе
+ * @return pathMatrix - матрицу путей со случайными значениями
+ */
+vector<vector<int>> generatePathMatrix(size_t numNodes, size_t minValue, size_t maxValue);
+
+/**
+ * @brief Функция выводящая в поток вывода матрицу путей
+ * @param pathMatrix - матрица путей
+ * @param numNodes - количество узлов в графе
+ */
+void printPathMatrix(const vector<vector<int>>& pathMatrix, size_t numNodes);
+
+/**
+ * @brief Функция выводящая в поток вывода вектор с кратчайшими расстояниями
+ * @param shortestPaths - вектор с кратчайшими расстояниями
+ */
+void printShortestPaths(const vector<size_t>& shortestPaths);
+
+/**
+ * @brief Функция ищущая индекс ненулевого элемента, игнорируя заранее заданные индексы
+ * @param distances - вектор в котором необходимо найти индекс
+ * @param ignoredIndices - вектор индексов, которые необходимо пропускать при поиске
+ * @return minIndex - индекс ненулевого элемента, игнорируя заранее заданные индексы
+ */
+size_t findMinNonZeroIndex(const vector<size_t>& distances, const vector<size_t>& ignoredIndices);
+
+/**
+ * @brief Функция ищущая кратчайшие расстояние до всех узлов от заданного
+ * @param sourceNode - узел от которого надо найти расстояние до всех остальных узлов
+ * @param pathMatrix - матрица путей
+ * @return shortestPaths - вектор из кратчайших путей из заданной точки до всех остальных узлов
+ */
+vector<size_t> getShortestPaths(size_t sourceNode, const vector<vector<int>>& pathMatrix);
+
+int main() {
+    try {
+        size_t minValue = 3;
+        size_t maxValue = 150;
+        size_t numNodes = 6;
+        size_t sourceNode = 4;
+
+        const vector<vector<int>> pathMatrix = generatePathMatrix(numNodes, minValue, maxValue);
+
+        cout << "Матрица путей:" << '\n';
+        printPathMatrix(pathMatrix, numNodes);
+
+        vector<size_t> shortestPaths = getShortestPaths(sourceNode, pathMatrix);
+
+        cout << "\n---------------------------" << '\n';
+        cout << "Кратчайшие пути от узла " << sourceNode << " (начиная с 0) до всех остальных:" << '\n';
+        printShortestPaths(shortestPaths);
+
+        return 0;
+    } catch (const exception& e) {
+        cerr << "Исключение: " << e.what() << '\n';
+        return 1;
+    }
+}
+
+vector<vector<int>> generatePathMatrix(size_t numNodes, size_t minValue, size_t maxValue) {
+    random_device rd;
+    mt19937 gen(rd());
+    uniform_int_distribution<> uniformIntDistribution(minValue, maxValue);
+
+    vector<vector<int>> pathMatrix(numNodes, vector<int>(numNodes));
+
+    for (size_t i = 0; i < numNodes; ++i) {
+        pathMatrix[i][i] = 0;
+        for (size_t j = i + 1; j < numNodes; ++j) {
+            size_t value = uniformIntDistribution(gen);
+            pathMatrix[i][j] = value;
+            pathMatrix[j][i] = value;
+        }
+    }
+
+    return pathMatrix;
+}
+
+void printPathMatrix(const vector<vector<int>>& pathMatrix, size_t numNodes) {
+    for (size_t i = 0; i < numNodes; ++i) {
+        for (size_t j = 0; j < numNodes; ++j) {
+            cout << pathMatrix[i][j] << '\t';
+        }
+        cout << '\n';
+    }
+}
+
+void printShortestPaths(const vector<size_t>& shortestPaths) {
+    for (size_t i = 0; i < shortestPaths.size(); ++i) {
+        cout << shortestPaths[i] << "\t";
+    }
+    cout << '\n';
+}
+
+size_t findMinNonZeroIndex(const vector<size_t>& distances, const vector<size_t>& ignoredIndices) {
+    size_t minIndex = distances.size() - 1;
+    size_t minValue = numeric_limits<size_t>::max();
+
+    for (size_t i = 0; i < distances.size(); ++i) {
+        if (distances[i] != 0 && find(ignoredIndices.begin(), ignoredIndices.end(), i) == ignoredIndices.end()) {
+            if (distances[i] < minValue) {
+                minValue = distances[i];
+                minIndex = i;
+            }
+        }
+    }
+
+    return minIndex;
+}
+
+vector<size_t> getShortestPaths(size_t sourceNode, const vector<vector<int>>& pathMatrix) {
+    size_t inf = numeric_limits<int>::max();
+    size_t matrixSize = pathMatrix[0].size();
+
+    vector<size_t> shortestPaths(matrixSize, inf);
+    shortestPaths[sourceNode] = 0;
+
+    vector<size_t> visitedNodes;
+    visitedNodes.push_back(sourceNode);
+
+    for (size_t i = 0; i < matrixSize; ++i) {
+        for (size_t j = 0; j < matrixSize; ++j) {
+            if (shortestPaths[j] > static_cast<size_t>(pathMatrix[visitedNodes[i]][j]) + shortestPaths[visitedNodes[i]]) {
+                shortestPaths[j] = static_cast<size_t>(pathMatrix[visitedNodes[i]][j]) + shortestPaths[visitedNodes[i]];
+            }
+        }
+
+        if (visitedNodes.size() == matrixSize) {
+            break;
+        } else {
+            size_t minIndex = findMinNonZeroIndex(shortestPaths, visitedNodes);
+            visitedNodes.push_back(minIndex);
+        }
+    }
+
+    return shortestPaths;
+}
